@@ -180,11 +180,15 @@ static void do_clip(ErlNifPid pid, NSString *src, NSString *dst,
   export.timeRange = CMTimeRangeMake(start, duration);
   export.outputURL = [NSURL fileURLWithPath:dst];
   export.outputFileType = AVFileTypeMPEG4;
-  const char *dst_c = dst.UTF8String;
   long long out_ms = (long long)(CMTimeGetSeconds(duration) * 1000.0);
+  // ARC captures `dst` for the block's lifetime; calling `.UTF8String`
+  // inside gives a pointer that stays valid until the block returns.
+  // Capturing `dst.UTF8String` outside the block was a use-after-free —
+  // the caller's NSString could be released before the async export
+  // finished. See MOB-88.
   [export exportAsynchronouslyWithCompletionHandler:^{
     if (export.status == AVAssetExportSessionStatusCompleted) {
-      send_clipped(pid, dst_c, out_ms);
+      send_clipped(pid, dst.UTF8String, out_ms);
     } else {
       send_error(pid, ERR_IO);
     }
@@ -224,10 +228,12 @@ static void do_extract_audio(ErlNifPid pid, NSString *src, NSString *dst) {
   [[NSFileManager defaultManager] removeItemAtPath:dst error:nil];
   export.outputURL = [NSURL fileURLWithPath:dst];
   export.outputFileType = AVFileTypeAppleM4A;
-  const char *dst_c = dst.UTF8String;
+  // Same UAF avoidance as do_clip — capture the NSString into the block
+  // (ARC retains it), call `.UTF8String` inside so the pointer is only
+  // dereferenced while the string is alive. See MOB-88.
   [export exportAsynchronouslyWithCompletionHandler:^{
     if (export.status == AVAssetExportSessionStatusCompleted) {
-      send_audio(pid, dst_c);
+      send_audio(pid, dst.UTF8String);
     } else {
       send_error(pid, ERR_IO);
     }
