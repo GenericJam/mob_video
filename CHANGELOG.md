@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.1] - 2026-09-30
 
 ### Fixed
 
@@ -17,6 +17,12 @@
   lifetime) and call `.UTF8String` inside the block, so the pointer is
   only dereferenced while the string is alive. iOS-only — Android takes
   a different path via the Kotlin bridge.
+
+### Changed
+- **Re-signed with plugin envelope v2** (MOB-287). mob_dev 0.7.2+ verifies
+  this signature before evaluating the manifest. mob_dev 0.7.0 / 0.7.1 can't
+  read v2 signatures and report this release as `invalid signature` —
+  upgrade the host app to `{:mob_dev, "~> 0.7.2", only: :dev, runtime: false}`.
 
 ## 0.1.0
 
