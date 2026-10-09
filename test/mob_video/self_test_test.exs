@@ -49,6 +49,23 @@ defmodule MobVideo.SelfTestTest do
     def video_probe(_src), do: :erlang.nif_error(:nif_not_loaded)
   end
 
+  defmodule LateNif do
+    def video_probe(_src) do
+      caller = self()
+
+      spawn(fn ->
+        Process.sleep(50)
+        send(caller, {:video, :error, :not_found})
+      end)
+
+      :ok
+    end
+  end
+
+  defmodule CrashNif do
+    def video_probe(_src), do: raise("boom")
+  end
+
   test "the manifest declares it and the validator raises no selftest warning" do
     {:ok, m} = Manifest.load(@plugin_dir)
     assert m.selftest == MobVideo.SelfTest
@@ -92,6 +109,26 @@ defmodule MobVideo.SelfTestTest do
     assert reason =~ "returned :ok but no {:video, _, _} answer arrived in 0 ms"
   end
 
+  test "a stale answer in the caller's mailbox neither passes the test nor gets consumed" do
+    send(self(), {:video, :error, :not_found})
+    send(self(), {:video, :clipped, %{path: "/host/clip.mp4", duration_ms: 1_000}})
+
+    assert {:fail, _} = SelfTest.run(@android, SilentNif, 50)
+    assert_received {:video, :error, :not_found}
+    assert_received {:video, :clipped, %{path: "/host/clip.mp4"}}
+  end
+
+  test "a late answer after the timeout does not reach the caller" do
+    assert {:fail, _} = SelfTest.run(@ios, LateNif, 0)
+    refute_receive {:video, _, _}, 200
+  end
+
+  test "a NIF that crashes with something other than an ErlangError fails, quoting it" do
+    assert {:fail, reason} = SelfTest.run(@android, CrashNif, 1_000)
+    assert reason =~ "video_probe/1 on android crashed the probe process"
+    assert reason =~ "boom"
+  end
+
   test "every branch is a result the runner accepts" do
     for nif <- [
           NotFoundNif,
@@ -100,7 +137,8 @@ defmodule MobVideo.SelfTestTest do
           SilentNif,
           UnregisteredNif,
           NoJniEnvNif,
-          NotLoadedNif
+          NotLoadedNif,
+          CrashNif
         ] do
       assert Mob.Plugin.SelfTest.result?(SelfTest.run(@android, nif, 200)), inspect(nif)
     end

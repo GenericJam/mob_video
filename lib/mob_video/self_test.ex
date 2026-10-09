@@ -29,9 +29,17 @@ defmodule MobVideo.SelfTest do
   The missing file needs no camera, codec, media or permission, so the same
   answer is expected on an iOS simulator, an Android emulator and a physical
   device; there is no skip. Any other delivery (`:info` for a file that should
-  not exist, another error reason) is a failure, as is silence: the Kotlin
-  worker died, the delivery thunk did not link (`UnsatisfiedLinkError` on the
-  worker thread) or the queue is stuck behind a long host operation.
+  not exist, another error reason) is a failure, as is silence: the delivery
+  never reached the calling pid, or the native queue is still busy with a long
+  host clip/extract after 5 s. (On Android a Kotlin `Error` on the worker, such
+  as an `UnsatisfiedLinkError` from an unlinked delivery thunk, kills the app
+  instead; the runner reports that as a failure too.)
+
+  The probe and the wait run in a throwaway process: the native side answers
+  `enif_self` of the caller, so only this call's answer can arrive there, a
+  stale `{:video, _, _}` in the runner's mailbox cannot make it pass, a host
+  screen's pending results are not consumed, and a late answer dies with the
+  process.
   """
   @behaviour Mob.Plugin.SelfTest
 
@@ -47,6 +55,18 @@ defmodule MobVideo.SelfTest do
   @spec run(Mob.Plugin.SelfTest.ctx(), module(), non_neg_integer()) ::
           Mob.Plugin.SelfTest.result()
   def run(%{platform: platform}, nif, timeout \\ @answer_timeout) do
+    {pid, ref} = spawn_monitor(fn -> exit({:result, probe(platform, nif, timeout)}) end)
+
+    receive do
+      {:DOWN, ^ref, :process, ^pid, {:result, result}} ->
+        result
+
+      {:DOWN, ^ref, :process, ^pid, reason} ->
+        {:fail, "video_probe/1 on #{platform} crashed the probe process: #{inspect(reason)}"}
+    end
+  end
+
+  defp probe(platform, nif, timeout) do
     case nif.video_probe(@missing_src) do
       :ok ->
         await_answer(platform, timeout)
