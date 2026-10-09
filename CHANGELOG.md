@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [0.1.2] - 2026-10-09
 
 ### Added
 
@@ -16,16 +16,19 @@
   skip. The probe runs in a throwaway process, so a stale `{:video, _, _}`
   in the caller's mailbox can neither pass it nor be consumed. Run it with
   `mix mob.selftest` from a host app (mob_dev 0.7.17).
-  Requires mob 0.9.15; `mob_version` in the manifest is now `~> 0.9`.
 
 ### Changed
 
+- Requires mob >= 0.9.15 (was `~> 0.7`), for `Mob.Plugin.SelfTest`;
+  `mob_version` in the manifest is now `~> 0.9` (was `~> 0.7`).
 - **Android: `video_probe/1` reports an unregistered bridge.** The Zig NIF
   returns `{:error, :bridge_not_registered}` instead of calling into JNI
   with a null class / method ID when `MobVideoBridge.register()` never ran
-  or the `video_probe` method-ID lookup returned null. `MobVideo.probe/2` is
-  unchanged (it ignores the return value); the self-test turns it into a
-  failure.
+  or the `video_probe` method-ID lookup returned null, instead of
+  crashing the app. `MobVideo.probe/2` still returns the socket; with an
+  unregistered bridge it now sends no `{:video, _, _}` message. `clip/4`,
+  `thumbnail/4` and `extract_audio/3` are not guarded yet. The self-test
+  turns the error into a failure.
 
 ## [0.1.1] - 2026-09-30
 
