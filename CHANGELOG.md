@@ -1,5 +1,32 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **On-device self-test** (MOB-418). `MobVideo.SelfTest` implements
+  `Mob.Plugin.SelfTest` and is declared in the manifest as `selftest:`. It
+  calls `video_probe/1` on a path that does not exist and waits up to 5 s
+  for the native answer: the NIF must return `:ok` and the native worker
+  (iOS: the GCD queue's `fileExistsAtPath:` check; Android: the Kotlin
+  `MobVideoBridge` worker's `File.exists()` check, delivered through the
+  `nativeDeliverVideoError` JNI thunk) must send
+  `{:video, :error, :not_found}`. Anything else, silence, or the stub's
+  `nif_not_loaded` is a failure; no hardware is involved, so there is no
+  skip. The probe runs in a throwaway process, so a stale `{:video, _, _}`
+  in the caller's mailbox can neither pass it nor be consumed. Run it with
+  `mix mob.selftest` from a host app (mob_dev 0.7.17).
+  Requires mob 0.9.15; `mob_version` in the manifest is now `~> 0.9`.
+
+### Changed
+
+- **Android: `video_probe/1` reports an unregistered bridge.** The Zig NIF
+  returns `{:error, :bridge_not_registered}` instead of calling into JNI
+  with a null class / method ID when `MobVideoBridge.register()` never ran
+  or the `video_probe` method-ID lookup returned null. `MobVideo.probe/2` is
+  unchanged (it ignores the return value); the self-test turns it into a
+  failure.
+
 ## [0.1.1] - 2026-09-30
 
 ### Fixed

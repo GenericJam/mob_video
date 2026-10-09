@@ -70,8 +70,11 @@ What the suite covers today:
 * The `.erl` stub loads on a host build and every documented arity is exported.
 * Host fallback path: calling a NIF with no native linked raises `nif_not_loaded` cleanly.
 * `MobVideo` exports every operation the moduledoc documents.
+* `MobVideo.SelfTest` (the on-device self-test) classifies every native answer to `video_probe/1` of a missing file, against stub NIF modules; the manifest declares it as `selftest:`.
 
 **Native code is not exercised by `mix test`.** It links only inside a host `--native` build. Verify a real op on a device before trusting a native change: activate mob_video in a host app, `mix mob.deploy --native --device <serial>`, then drive the demo screen (`/mob_video/demo`) with a `sample.mp4` in the app's documents directory.
+
+The cheapest on-device check is the self-test: `mix mob.selftest` from a host app that depends on mob_video (mob_dev >= 0.7.17). It proves the NIF, the Android bridge registration and the delivery path answer, not that a codec works. On Android, `video_probe/1` returns `{:error, :bridge_not_registered}` when the bridge never registered; the public API ignores it, the self-test fails on it.
 
 Video-encoding behaviour varies by platform: what Android's `MediaMuxer` accepts is not identical to what `AVAssetExportSession` accepts, and codec support varies across OEMs. Verify on both a real Android device (Kevin has a Moto G Power 5G 2024) and a real iPhone before shipping a fix that touches the codec surface — the simulator/emulator paths hide meaningful failure modes.
 
