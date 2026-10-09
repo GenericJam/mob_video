@@ -75,7 +75,7 @@ defmodule MobVideo.SelfTest do
         {:fail,
          "video_probe/1 on #{platform} returned {:error, :bridge_not_registered}: " <>
            "the Kotlin MobVideoBridge was never registered (MobVideoBridge.register() " <>
-           "did not run or the video_probe method-ID lookup failed), expected :ok"}
+           "did not run or the video_probe method-ID lookup returned null), expected :ok"}
 
       other ->
         {:fail, "video_probe/1 on #{platform} returned #{inspect(other)}, expected :ok"}

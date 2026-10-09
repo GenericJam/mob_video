@@ -23,7 +23,7 @@
 - **Android: `video_probe/1` reports an unregistered bridge.** The Zig NIF
   returns `{:error, :bridge_not_registered}` instead of calling into JNI
   with a null class / method ID when `MobVideoBridge.register()` never ran
-  or the `video_probe` method-ID lookup failed. `MobVideo.probe/2` is
+  or the `video_probe` method-ID lookup returned null. `MobVideo.probe/2` is
   unchanged (it ignores the return value); the self-test turns it into a
   failure.
 

@@ -1,6 +1,8 @@
 defmodule MobVideo.SelfTestTest do
   use ExUnit.Case, async: true
 
+  import ExUnit.CaptureLog
+
   alias MobDev.Plugin.{Manifest, Validator}
   alias MobVideo.SelfTest
 
@@ -124,7 +126,8 @@ defmodule MobVideo.SelfTestTest do
   end
 
   test "a NIF that crashes with something other than an ErlangError fails, quoting it" do
-    assert {:fail, reason} = SelfTest.run(@android, CrashNif, 1_000)
+    {result, _log} = with_log(fn -> SelfTest.run(@android, CrashNif, 1_000) end)
+    assert {:fail, reason} = result
     assert reason =~ "video_probe/1 on android crashed the probe process"
     assert reason =~ "boom"
   end
@@ -140,7 +143,8 @@ defmodule MobVideo.SelfTestTest do
           NotLoadedNif,
           CrashNif
         ] do
-      assert Mob.Plugin.SelfTest.result?(SelfTest.run(@android, nif, 200)), inspect(nif)
+      {result, _log} = with_log(fn -> SelfTest.run(@android, nif, 200) end)
+      assert Mob.Plugin.SelfTest.result?(result), inspect(nif)
     end
   end
 

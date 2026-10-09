@@ -217,7 +217,7 @@ export fn Java_io_mob_video_MobVideoBridge_nativeDeliverVideoError(
 // ── Bridge-call helpers (build jstrings, call static void, clean up) ───────
 
 /// {error, bridge_not_registered}: nativeRegister never ran (MobPluginBootstrap
-/// did not call register()) or a method-ID lookup failed. MobVideo.probe/2
+/// did not call register()) or a method-ID lookup returned null. MobVideo.probe/2
 /// ignores the return value; MobVideo.SelfTest turns it into a failure (MOB-418).
 fn bridgeNotRegistered(env: ?*erts.ErlNifEnv) erts.ERL_NIF_TERM {
     return erts.makeTuple(env, .{ erts.atom(env, "error"), erts.atom(env, "bridge_not_registered") });
