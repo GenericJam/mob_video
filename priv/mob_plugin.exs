@@ -1,8 +1,11 @@
 %{
   name: :mob_video,
-  mob_version: "~> 0.7",
+  mob_version: "~> 0.9",
   plugin_spec_version: 1,
   description: "On-device video processing (clip/probe/thumbnail/extract-audio) via the platform toolkits",
+  # On-device proof for `mix mob.selftest` / mob_ci: video_probe/1 of a missing
+  # file must come back {:video, :error, :not_found} (see Mob.Plugin.SelfTest).
+  selftest: MobVideo.SelfTest,
   # A sample screen the host can navigate to by route. Pure-Elixir +
   # hot-pushable; drop it and this entry in a real app that builds its own UI.
   screens: [

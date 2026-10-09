@@ -45,6 +45,10 @@ config :mob, :trusted_plugins, %{mob_video: "ed25519:<fingerprint>"}
 Run `mix mob.plugin.trust mob_video` to record the fingerprint, then
 `mix mob.deploy --native`.
 
+On-device self-test: `mix mob.selftest` from a host app that depends on
+mob_video (mob_dev >= 0.7.17) runs `MobVideo.SelfTest`, which probes a missing
+file and expects `{:video, :error, :not_found}` back from the native side.
+
 ## Why no ffmpeg
 
 A clipper, a thumbnailer, an audio-extractor and a prober are all **stream-copy
