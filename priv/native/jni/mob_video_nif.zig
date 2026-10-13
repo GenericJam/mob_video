@@ -217,8 +217,8 @@ export fn Java_io_mob_video_MobVideoBridge_nativeDeliverVideoError(
 // ── Bridge-call helpers (build jstrings, call static void, clean up) ───────
 
 /// {error, bridge_not_registered}: nativeRegister never ran (MobPluginBootstrap
-/// did not call register()) or a method-ID lookup returned null. MobVideo.probe/2
-/// ignores the return value; MobVideo.SelfTest turns it into a failure (MOB-418).
+/// did not call register()) or a method-ID lookup returned null. The MobVideo
+/// wrappers log it as a warning; MobVideo.SelfTest turns it into a failure (MOB-418).
 fn bridgeNotRegistered(env: ?*erts.ErlNifEnv) erts.ERL_NIF_TERM {
     return erts.makeTuple(env, .{ erts.atom(env, "error"), erts.atom(env, "bridge_not_registered") });
 }
@@ -243,6 +243,7 @@ fn callTwoPathTwoLong(
     a: jni.JLong,
     b: jni.JLong,
 ) erts.ERL_NIF_TERM {
+    if (g_vid_cls == null or method == null) return bridgeNotRegistered(env);
     var attached: c_int = 0;
     const jenv = get_jenv(&attached) orelse return erts.atom(env, "error");
     const jsrc = jni.newStringUTF(jenv, src);
@@ -261,6 +262,7 @@ fn callTwoPath(
     src: [*:0]const u8,
     dst: [*:0]const u8,
 ) erts.ERL_NIF_TERM {
+    if (g_vid_cls == null or method == null) return bridgeNotRegistered(env);
     var attached: c_int = 0;
     const jenv = get_jenv(&attached) orelse return erts.atom(env, "error");
     const jsrc = jni.newStringUTF(jenv, src);

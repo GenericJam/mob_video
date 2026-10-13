@@ -44,7 +44,17 @@ defmodule MobVideo do
   deliberately out of scope: they need a software codec pipeline (ffmpeg) with
   real size/licensing/perf cost. Everything above is stream-copy or single-frame
   decode, which the platform does for free. See the README for the rationale.
+
+  ## When the native side refuses a call
+
+  The functions keep returning the socket. When the native side refuses the
+  call (on Android, `{:error, :bridge_not_registered}` when `MobVideoBridge`
+  never registered), they log a warning naming the function and the reason, and
+  no `{:video, …}` message follows. `mix mob.selftest` reports an unregistered
+  bridge before you get that far.
   """
+
+  require Logger
 
   @doc """
   Read `src`'s metadata. Delivers `{:video, :info, map}` or `{:video, :error,
@@ -56,7 +66,7 @@ defmodule MobVideo do
   """
   @spec probe(Mob.Socket.t(), String.t()) :: Mob.Socket.t()
   def probe(socket, src) when is_binary(src) do
-    :mob_video_nif.video_probe(src)
+    warn_on_error(nif().video_probe(src), "probe/2")
     socket
   end
 
@@ -73,7 +83,7 @@ defmodule MobVideo do
   def clip(socket, src, dst, opts \\ []) when is_binary(src) and is_binary(dst) do
     start_ms = Keyword.get(opts, :start_ms, 0)
     end_ms = Keyword.get(opts, :end_ms, 0)
-    :mob_video_nif.video_clip(src, dst, start_ms, end_ms)
+    warn_on_error(nif().video_clip(src, dst, start_ms, end_ms), "clip/4")
     socket
   end
 
@@ -91,7 +101,7 @@ defmodule MobVideo do
   def thumbnail(socket, src, dst, opts \\ []) when is_binary(src) and is_binary(dst) do
     at_ms = Keyword.get(opts, :at_ms, 0)
     max_width = Keyword.get(opts, :max_width, 0)
-    :mob_video_nif.video_thumbnail(src, dst, at_ms, max_width)
+    warn_on_error(nif().video_thumbnail(src, dst, at_ms, max_width), "thumbnail/4")
     socket
   end
 
@@ -102,7 +112,16 @@ defmodule MobVideo do
   """
   @spec extract_audio(Mob.Socket.t(), String.t(), String.t()) :: Mob.Socket.t()
   def extract_audio(socket, src, dst) when is_binary(src) and is_binary(dst) do
-    :mob_video_nif.video_extract_audio(src, dst)
+    warn_on_error(nif().video_extract_audio(src, dst), "extract_audio/3")
     socket
   end
+
+  # The NIF module. Tests put a stub in the :mob_video app env.
+  defp nif, do: Application.get_env(:mob_video, :nif, :mob_video_nif)
+
+  defp warn_on_error({:error, reason}, function) do
+    Logger.warning("MobVideo.#{function}: the native side refused the call: #{inspect(reason)}")
+  end
+
+  defp warn_on_error(_answer, _function), do: :ok
 end

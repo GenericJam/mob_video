@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+- **Android: a clip, thumbnail or extract-audio call before the bridge
+  registers no longer aborts the VM** (MOB-424). `video_clip/4`,
+  `video_thumbnail/4` and `video_extract_audio/2` called JNI through the
+  cached `MobVideoBridge` class and method ID without checking them, so a
+  call before `MobVideoBridge.register()` ran (or after a failed method-ID
+  lookup) crashed the app. They now answer `{:error, :bridge_not_registered}`
+  like `video_probe/1` already did.
+- **The `MobVideo` functions log a refused call.** `probe/2`, `clip/4`,
+  `thumbnail/4` and `extract_audio/3` log a warning naming the function and
+  the reason when the NIF answers `{:error, reason}`, instead of dropping it.
+  They still return the socket.
+
 ## [0.1.2] - 2026-10-09
 
 ### Added
