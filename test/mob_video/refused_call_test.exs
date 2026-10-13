@@ -19,7 +19,15 @@ defmodule MobVideo.RefusedCallTest do
   end
 
   setup do
-    on_exit(fn -> Application.delete_env(:mob_video, :nif) end)
+    previous = Application.fetch_env(:mob_video, :nif)
+
+    on_exit(fn ->
+      case previous do
+        {:ok, nif} -> Application.put_env(:mob_video, :nif, nif)
+        :error -> Application.delete_env(:mob_video, :nif)
+      end
+    end)
+
     %{socket: Mob.Socket.new(__MODULE__)}
   end
 

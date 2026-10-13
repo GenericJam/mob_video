@@ -10,7 +10,10 @@
   cached `MobVideoBridge` class and method ID without checking them, so a
   call before `MobVideoBridge.register()` ran (or after a failed method-ID
   lookup) crashed the app. They now answer `{:error, :bridge_not_registered}`
-  like `video_probe/1` already did.
+  like `video_probe/1` already did. `nativeRegister` now clears the
+  `NoSuchMethodError` a failed method-ID lookup leaves pending, so that
+  method ID stays null instead of the error being thrown out of
+  `MobVideoBridge.register()`.
 - **The `MobVideo` functions log a refused call.** `probe/2`, `clip/4`,
   `thumbnail/4` and `extract_audio/3` log a warning naming the function and
   the reason when the NIF answers `{:error, reason}`, instead of dropping it.

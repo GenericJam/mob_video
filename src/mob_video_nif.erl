@@ -10,8 +10,9 @@
 %%
 %% Every NIF returns :ok immediately and is asynchronous — the result lands in
 %% the caller's mailbox as a {video, _} message (see the MobVideo moduledoc).
-%% Android's video_probe/1 returns {error, bridge_not_registered} instead when
-%% the Kotlin bridge never registered (MobVideo.SelfTest fails on it).
+%% On Android every NIF returns {error, bridge_not_registered} instead when the
+%% Kotlin bridge never registered or its method-ID lookup failed (the MobVideo
+%% wrappers log it; MobVideo.SelfTest fails on it).
 -module(mob_video_nif).
 -export([video_probe/1, video_clip/4, video_thumbnail/4, video_extract_audio/2]).
 -on_load(init/0).

@@ -38,10 +38,17 @@ var g_vid_cls: jni.JClass = null;
 export fn Java_io_mob_video_MobVideoBridge_nativeRegister(jenv: *jni.JNIEnv, cls: jni.JClass) callconv(.c) void {
     g_vid_cls = jni.newGlobalRef(jenv, cls);
     if (g_vid_cls == null) return;
+    // A failed lookup leaves NoSuchMethodError pending, which would break the
+    // next JNI call and throw out of register(); clear it so the method ID
+    // stays null and its NIF answers bridge_not_registered (MOB-424).
     g_vid.probe = jni.getStaticMethodID(jenv, cls, "video_probe", "(JLjava/lang/String;)V");
+    jni.exceptionClear(jenv);
     g_vid.clip = jni.getStaticMethodID(jenv, cls, "video_clip", "(JLjava/lang/String;Ljava/lang/String;JJ)V");
+    jni.exceptionClear(jenv);
     g_vid.thumbnail = jni.getStaticMethodID(jenv, cls, "video_thumbnail", "(JLjava/lang/String;Ljava/lang/String;JJ)V");
+    jni.exceptionClear(jenv);
     g_vid.extract_audio = jni.getStaticMethodID(jenv, cls, "video_extract_audio", "(JLjava/lang/String;Ljava/lang/String;)V");
+    jni.exceptionClear(jenv);
 }
 
 // ── Thread-attach + pid round-trip helpers (mirror mob-core / camera) ─────
