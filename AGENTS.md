@@ -164,5 +164,5 @@ Canonical process in [`~/code/mob/RELEASE.md`](../mob/RELEASE.md). mob_video spe
 Native video work fails in ways `mix test` can't see. Reach for the richer signal first:
 
 1. **Drive the demo screen from a live host.** Activate mob_video, `mix mob.deploy --native --device <serial>`, drop a `sample.mp4` in the app's Documents dir, tap through the demo. The `{:video, ...}` messages arrive at `handle_info/2` — watch them in `mix mob.connect`.
-2. **Instrument the native seam, not the Elixir seam.** The Elixir side already returns `:ok` immediately; the interesting behaviour is on the other side of the NIF. Add a log line at the boundary in the ObjC or Kotlin file that's misbehaving, redeploy, then decide the next change.
+2. **Instrument the native seam, not the Elixir seam.** The Elixir side returns the socket immediately (logging a warning if the NIF refused the call, e.g. `{:error, :bridge_not_registered}`); the interesting behaviour is on the other side of the NIF. Add a log line at the boundary in the ObjC or Kotlin file that's misbehaving, redeploy, then decide the next change.
 3. **Isolate by operation.** The four ops share the delivery path but almost nothing else — if `probe` is fine and `clip` is broken, that's `MediaMuxer` / `AVAssetExportSession`, not JNI or `enif_send`.

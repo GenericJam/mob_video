@@ -4,7 +4,9 @@
 //! `io.mob.video.MobVideoBridge` (MediaExtractor + MediaMuxer stream-copy,
 //! MediaMetadataRetriever for probe/thumbnail). Each NIF returns :ok and runs
 //! async on the bridge's worker thread; results land via the exported deliver
-//! thunks (info / clipped / thumbnail / audio / error).
+//! thunks (info / clipped / thumbnail / audio / error). Before the bridge
+//! registers (or after a failed method-ID lookup) a NIF answers
+//! {error, bridge_not_registered} instead, and :error when no JNI env attaches.
 //!
 //! Build path: compiled via `addZigObject` from `-Dplugin_zig_nifs`, reaching
 //! mob-core ERTS / JNI bindings through `@import("erts")` / `@import("jni")`.
