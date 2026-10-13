@@ -4,7 +4,9 @@
 //! `io.mob.video.MobVideoBridge` (MediaExtractor + MediaMuxer stream-copy,
 //! MediaMetadataRetriever for probe/thumbnail). Each NIF returns :ok and runs
 //! async on the bridge's worker thread; results land via the exported deliver
-//! thunks (info / clipped / thumbnail / audio / error).
+//! thunks (info / clipped / thumbnail / audio / error). Before the bridge
+//! registers (or after a failed method-ID lookup) a NIF answers
+//! {error, bridge_not_registered} instead, and :error when no JNI env attaches.
 //!
 //! Build path: compiled via `addZigObject` from `-Dplugin_zig_nifs`, reaching
 //! mob-core ERTS / JNI bindings through `@import("erts")` / `@import("jni")`.
@@ -38,10 +40,17 @@ var g_vid_cls: jni.JClass = null;
 export fn Java_io_mob_video_MobVideoBridge_nativeRegister(jenv: *jni.JNIEnv, cls: jni.JClass) callconv(.c) void {
     g_vid_cls = jni.newGlobalRef(jenv, cls);
     if (g_vid_cls == null) return;
+    // A failed lookup leaves NoSuchMethodError pending, which would break the
+    // next JNI call and throw out of register(); clear it so the method ID
+    // stays null and its NIF answers bridge_not_registered (MOB-424).
     g_vid.probe = jni.getStaticMethodID(jenv, cls, "video_probe", "(JLjava/lang/String;)V");
+    jni.exceptionClear(jenv);
     g_vid.clip = jni.getStaticMethodID(jenv, cls, "video_clip", "(JLjava/lang/String;Ljava/lang/String;JJ)V");
+    jni.exceptionClear(jenv);
     g_vid.thumbnail = jni.getStaticMethodID(jenv, cls, "video_thumbnail", "(JLjava/lang/String;Ljava/lang/String;JJ)V");
+    jni.exceptionClear(jenv);
     g_vid.extract_audio = jni.getStaticMethodID(jenv, cls, "video_extract_audio", "(JLjava/lang/String;Ljava/lang/String;)V");
+    jni.exceptionClear(jenv);
 }
 
 // ── Thread-attach + pid round-trip helpers (mirror mob-core / camera) ─────
@@ -217,8 +226,8 @@ export fn Java_io_mob_video_MobVideoBridge_nativeDeliverVideoError(
 // ── Bridge-call helpers (build jstrings, call static void, clean up) ───────
 
 /// {error, bridge_not_registered}: nativeRegister never ran (MobPluginBootstrap
-/// did not call register()) or a method-ID lookup returned null. MobVideo.probe/2
-/// ignores the return value; MobVideo.SelfTest turns it into a failure (MOB-418).
+/// did not call register()) or a method-ID lookup returned null. The MobVideo
+/// wrappers log it as a warning; MobVideo.SelfTest turns it into a failure (MOB-418).
 fn bridgeNotRegistered(env: ?*erts.ErlNifEnv) erts.ERL_NIF_TERM {
     return erts.makeTuple(env, .{ erts.atom(env, "error"), erts.atom(env, "bridge_not_registered") });
 }
@@ -243,6 +252,7 @@ fn callTwoPathTwoLong(
     a: jni.JLong,
     b: jni.JLong,
 ) erts.ERL_NIF_TERM {
+    if (g_vid_cls == null or method == null) return bridgeNotRegistered(env);
     var attached: c_int = 0;
     const jenv = get_jenv(&attached) orelse return erts.atom(env, "error");
     const jsrc = jni.newStringUTF(jenv, src);
@@ -261,6 +271,7 @@ fn callTwoPath(
     src: [*:0]const u8,
     dst: [*:0]const u8,
 ) erts.ERL_NIF_TERM {
+    if (g_vid_cls == null or method == null) return bridgeNotRegistered(env);
     var attached: c_int = 0;
     const jenv = get_jenv(&attached) orelse return erts.atom(env, "error");
     const jsrc = jni.newStringUTF(jenv, src);
